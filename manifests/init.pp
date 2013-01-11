@@ -87,34 +87,42 @@ define network_if_base (
     }
   }
 
-  file { "ifcfg-$interface":
-    mode    => "644",
-    owner   => "root",
-    group   => "root",
-    ensure  => "present",
-    path    => "/etc/sysconfig/network-scripts/ifcfg-$interface",
-    content => $isalias ? {
-      false => template("network/ifcfg-eth.erb"),
-      true  => template("network/ifcfg-alias.erb"),
-    }
-  }
-
-  case $ensure {
-    up: {
-      exec { "ifup-$interface":
-        command     => "/sbin/ifdown $interface; /sbin/ifup $interface",
-        subscribe   => File["ifcfg-$interface"],
-        refreshonly => true,
+  # verify if present interface
+  if $interface in $::interfaces {
+    file { "ifcfg-$interface":
+      mode    => "644",
+      owner   => "root",
+      group   => "root",
+      ensure  => "present",
+      path    => "/etc/sysconfig/network-scripts/ifcfg-$interface",
+      content => $isalias ? {
+        false => template("network/ifcfg-eth.erb"),
+        true  => template("network/ifcfg-alias.erb"),
       }
     }
 
-    down: {
-      exec { "ifdown-$interface":
-        command     => "/sbin/ifdown $interface",
-        subscribe   => File["ifcfg-$interface"],
-        refreshonly => true,
+    case $ensure {
+      up: {
+        exec { "ifup-$interface":
+          command     => "/sbin/ifdown $interface; /sbin/ifup $interface",
+          subscribe   => File["ifcfg-$interface"],
+          refreshonly => true,
+        }
+      }
+
+      down: {
+        exec { "ifdown-$interface":
+          command     => "/sbin/ifdown $interface",
+          subscribe   => File["ifcfg-$interface"],
+          refreshonly => true,
+        }
       }
     }
+  } else {
+    file { "ifcfg-$interface":
+      ensure  => "absent",
+      path    => "/etc/sysconfig/network-scripts/ifcfg-$interface",
+    }
+    notify { "$interface not present":
   }
-
 } # define network_if_base

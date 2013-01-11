@@ -123,6 +123,6 @@ define network_if_base (
       ensure  => "absent",
       path    => "/etc/sysconfig/network-scripts/ifcfg-$interface",
     }
-    notify { "$interface not present":
+    notify { "$interface not present": }
   }
 } # define network_if_base
